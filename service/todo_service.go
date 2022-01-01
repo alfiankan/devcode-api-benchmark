@@ -7,6 +7,7 @@ import (
 
 type TodoService struct {
 	TodoRepository repository.TodoRepositoryInterface
+	todoCache      []entity.Todo
 }
 
 type TodoServiceInterface interface {

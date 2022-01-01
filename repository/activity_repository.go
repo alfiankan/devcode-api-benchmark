@@ -21,20 +21,17 @@ type ActivityRepositoryInterface interface {
 }
 
 func (repo *ActivityRepository) UpdateById(id int, title string) (entity.ActivityWNull, error) {
-	stmt, err := repo.Db.Prepare("UPDATE activity SET title = ? WHERE id = ?")
-	if err != nil {
-		return entity.ActivityWNull{}, err
-	}
-	_, err = stmt.Exec(title, id)
+	stmt, _ := repo.Db.Prepare("UPDATE activities SET title = ? WHERE id = ?")
 
+	stmt.Exec(title, id)
 	// get updated data
 	activity, err := repo.GetById(id)
-
+	activity.Title = title
 	return activity, err
 }
 
 func (repo *ActivityRepository) DeleteById(id int) error {
-	stmt, err := repo.Db.Prepare("DELETE FROM activity WHERE id = ?")
+	stmt, err := repo.Db.Prepare("DELETE FROM activities WHERE id = ?")
 	if err != nil {
 		return err
 	}
@@ -51,12 +48,10 @@ func (repo *ActivityRepository) Add(activity entity.Activity) (entity.Activity, 
 	activity.CreatedAt = time.Now().Format(time.RFC3339)
 	activity.UpdatedAt = activity.CreatedAt
 	activity.DeletedAt = nil
-	go func() {
-		stmt, _ := repo.Db.Prepare("INSERT INTO activity (title, email) VALUES (?,?)")
+	stmt, _ := repo.Db.Prepare("INSERT INTO activities (title, email) VALUES (?,?)")
 
-		stmt.Exec(activity.Title, activity.Email)
-		repo.activityCache = append(repo.activityCache, activity)
-	}()
+	stmt.Exec(activity.Title, activity.Email)
+	repo.activityCache = append(repo.activityCache, activity)
 
 	return activity, nil
 }
@@ -66,7 +61,7 @@ func (repo *ActivityRepository) GetAll() ([]entity.Activity, error) {
 		return repo.activityCache, nil
 	}
 	//return repo.Db.Table("activity").Exec("INSERT INTO activity (title, email) VALUES (?,?)", activity.Title, activity.Email).Error
-	stmt, err := repo.Db.Prepare("SELECT * FROM activity")
+	stmt, err := repo.Db.Prepare("SELECT * FROM activities")
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +84,7 @@ func (repo *ActivityRepository) GetAll() ([]entity.Activity, error) {
 
 func (repo *ActivityRepository) GetById(id int) (entity.ActivityWNull, error) {
 	//return repo.Db.Table("activity").Exec("INSERT INTO activity (title, email) VALUES (?,?)", activity.Title, activity.Email).Error
-	stmt, err := repo.Db.Prepare("SELECT * FROM activity WHERE id = ?")
+	stmt, err := repo.Db.Prepare("SELECT * FROM activities WHERE id = ?")
 	if err != nil {
 		return entity.ActivityWNull{}, err
 	}

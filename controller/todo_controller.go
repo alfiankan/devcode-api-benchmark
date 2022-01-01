@@ -215,6 +215,7 @@ func (ctrl *TodoController) Add(ctx *fiber.Ctx) error {
 			Data:    errInsert.Error(),
 		})
 	}
+
 	return ctx.Status(201).JSON(&entity.BaseApiResponse{
 		Status:  "Success",
 		Message: "Success",

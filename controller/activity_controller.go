@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"devcode/entity"
 	"devcode/service"
-	"github.com/getsentry/sentry-go"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -14,6 +13,7 @@ type ActivityController struct {
 
 func (ctrl *ActivityController) ActivityHttpRoute(app *fiber.App) {
 	app.Post("/activity-groups", ctrl.Add)
+	app.Get("/activity-groups-plain", ctrl.Plain)
 	app.Get("/activity-groups", ctrl.GetAll)
 	app.Get("/activity-groups/:id", ctrl.GetById)
 	app.Delete("/activity-groups/:id", ctrl.Delete)
@@ -74,7 +74,9 @@ func (ctrl *ActivityController) GetAll(ctx *fiber.Ctx) error {
 		Data:    activities,
 	})
 }
-
+func (ctrl *ActivityController) Plain(ctx *fiber.Ctx) error {
+	return ctx.Status(200).JSON("Hello")
+}
 func (ctrl *ActivityController) Add(ctx *fiber.Ctx) error {
 	var requestData entity.ActivityCreateRequest
 	errParseBody := ctx.BodyParser(&requestData)
@@ -97,15 +99,13 @@ func (ctrl *ActivityController) Add(ctx *fiber.Ctx) error {
 
 	insertedData, errInsert := ctrl.activityService.Add(requestData.Title, requestData.Email)
 	if errInsert != nil {
-		sentry.CaptureException(errInsert)
 		return ctx.Status(500).JSON(&entity.BaseApiResponse{
 			Status:  "Internal Server Error",
 			Message: "Internal Server Error",
 			Data:    entity.EmptyObject{},
 		})
 	}
-	sentry.CaptureMessage(insertedData.Title + " = " + insertedData.Email + " = ")
-	sentry.CaptureMessage("INSERTED")
+
 	return ctx.Status(201).JSON(&entity.BaseApiResponse{
 		Status:  "Success",
 		Message: "Success",
@@ -143,10 +143,10 @@ func (ctrl *ActivityController) UpdateById(ctx *fiber.Ctx) error {
 		})
 	}
 
-	updatedData, errInsert := ctrl.activityService.UpdateById(id, requestData.Title)
-	if errInsert != nil {
+	updatedData, errUpdate := ctrl.activityService.UpdateById(id, requestData.Title)
+	if errUpdate != nil {
 
-		if errInsert == sql.ErrNoRows {
+		if errUpdate == sql.ErrNoRows {
 			return ctx.Status(404).JSON(&entity.BaseApiResponse{
 				Status:  "Not Found",
 				Message: "Activity with ID " + ctx.Params("id") + " Not Found",

@@ -1,0 +1,7 @@
+{
+  "apps" : [{
+    "name"        : "devcode-cluster",
+    "script"      : "./devcode",
+    "exec_mode" : "cluster"
+  }]
+}
