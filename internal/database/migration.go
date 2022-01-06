@@ -20,7 +20,7 @@ func Migrate(db *sql.DB) {
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			deleted_at datetime DEFAULT NULL
-		  ) ENGINE=MEMORY;`)
+		  ) ENGINE=InnoDB;`)
 		wg.Done()
 	}()
 
@@ -36,7 +36,7 @@ func Migrate(db *sql.DB) {
 			created_at datetime DEFAULT CURRENT_TIMESTAMP,
 			updated_at datetime DEFAULT CURRENT_TIMESTAMP,
 			deleted_at datetime DEFAULT NULL
-		  ) ENGINE=MEMORY;`)
+		  ) ENGINE=InnoDB;`)
 		wg.Done()
 	}()
 

@@ -6,7 +6,7 @@ COPY . .
 
 RUN go mod tidy
 
-RUN go build -o devcode
+RUN go build -tags=jsoniter -o devcode
 
 
 FROM alpine:latest

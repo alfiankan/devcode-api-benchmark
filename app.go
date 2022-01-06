@@ -5,17 +5,21 @@ import (
 	"devcode/internal/database"
 	"devcode/repository"
 	"devcode/service"
-	"github.com/gofiber/fiber/v2"
 	"log"
-	"net/http"
-	_ "net/http/pprof"
+	"runtime"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/labstack/echo/v4"
+
+	//"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
-func main() {
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-	//runtime.GOMAXPROCS(2)
+
+func fiberServer() {
+	runtime.GOMAXPROCS(2)
 
 	db := database.NewMysqlConnection()
 	//sentry.CaptureMessage("Migrating Database")
@@ -24,9 +28,15 @@ func main() {
 
 	app := fiber.New(fiber.Config{
 		AppName: "Devcode Todo",
-		Prefork: false,
+		Prefork: true,
 	})
+
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelBestSpeed,
+	}))
+
 	//app.Use(logger.New())
+	app.Use(recover.New())
 
 	activityRepository := repository.NewActivityRepository(db)
 	activityService := service.NewActivityService(&activityRepository)
@@ -38,5 +48,54 @@ func main() {
 	todoController := controller.NewTodoController(&todoService)
 	todoController.TodoHttpRoute(app)
 
-	log.Fatal(app.Listen(":3030"))
+	log.Println(app.Listen(":3030"))
+}
+
+func echoServer() {
+	db := database.NewMysqlConnection()
+	database.Migrate(db)
+	activityRepository := repository.NewActivityRepository(db)
+	activityService := service.NewActivityService(&activityRepository)
+	activityController := controller.NewActivityEchoController(&activityService)
+
+	todoRepository := repository.NewTodoRepository(db)
+	todoService := service.NewTodoService(&todoRepository)
+	todoController := controller.NewTodoEchoController(&todoService)
+
+	e := echo.New()
+
+	// Activity
+
+	activityController.ActivityHttpEchoRoute(e)
+	todoController.TodoHttpEchoRoute(e)
+
+	e.Logger.Print(e.Start(":3030"))
+}
+
+func ginServer() {
+	db := database.NewMysqlConnection()
+	database.Migrate(db)
+	activityRepository := repository.NewActivityRepository(db)
+	activityService := service.NewActivityService(&activityRepository)
+	activityController := controller.NewActivityGinController(&activityService)
+
+	todoRepository := repository.NewTodoRepository(db)
+	todoService := service.NewTodoService(&todoRepository)
+	todoController := controller.NewTodoGinController(&todoService)
+	gin.SetMode(gin.ReleaseMode)
+	server := gin.New()
+	server.Use(gin.Recovery())
+
+	activityController.ActivityHttpGinRoute(server)
+	todoController.TodoHttpGinRoute(server)
+
+	server.Run(":3030")
+
+}
+
+func main() {
+
+    fiberServer()
+    //echoServer()
+    //ginServer()
 }

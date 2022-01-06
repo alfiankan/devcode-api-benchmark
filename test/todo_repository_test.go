@@ -20,7 +20,7 @@ func TestTodoRepository_Add(t *testing.T) {
 		ActivityGroupId: 1,
 	})
 	log.Println(err, res)
-	log.Println(time.Since(start))
+	log.Println("elapsed : ",time.Since(start))
 }
 
 func TestTodoRepository_GetAll(t *testing.T) {

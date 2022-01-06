@@ -4,13 +4,11 @@ import (
 	"database/sql"
 	"devcode/entity"
 	"log"
-	"time"
 )
 
 type TodoRepository struct {
 	Db           *sql.DB
 	lastID       int64
-	todoCache    []entity.Todo
 	todoAllCache []entity.Todo
 }
 
@@ -24,42 +22,57 @@ type TodoRepositoryInterface interface {
 }
 
 func (repo *TodoRepository) GetFilterAll(groupId int) ([]entity.Todo, error) {
-	stmt, err := repo.Db.Prepare("SELECT * FROM todos WHERE activity_group_id = ?")
-	if err != nil {
-		return nil, err
-	}
-	results, err := stmt.Query(groupId)
 
-	// iter golang select db scan
-	var todos []entity.Todo
-	for results.Next() {
-		var todo entity.Todo
-		err = results.Scan(&todo.ID, &todo.Title, &todo.ActivityGroupId, &todo.IsActive, &todo.Priority, &todo.CreatedAt, &todo.UpdatedAt, &todo.DeletedAt)
+	if len(repo.todoAllCache) > 0 {
+		//log.Println("Usiing Cache")
+		filtered := []entity.Todo{}
+		for _, dt := range repo.todoAllCache {
+			if dt.ActivityGroupId == int64(groupId) {
+				filtered = append(filtered, dt)
+			}
+		}
+		return filtered, nil
+	} else {
+
+		stmt, err := repo.Db.Prepare("SELECT * FROM todos WHERE activity_group_id = ?")
 		if err != nil {
 			return nil, err
 		}
+		results, err := stmt.Query(groupId)
 
-		todos = append(todos, todo)
+		// iter golang select db scan
+		var todos []entity.Todo
+		for results.Next() {
+			var todo entity.Todo
+			err = results.Scan(&todo.ID, &todo.Title, &todo.ActivityGroupId, &todo.IsActive, &todo.Priority, &todo.CreatedAt, &todo.UpdatedAt, &todo.DeletedAt)
+			if err != nil {
+				return nil, err
+			}
+
+			todos = append(todos, todo)
+		}
+
+		return todos, err
 	}
-
-	return todos, err
 }
 
 func (repo *TodoRepository) Add(todo entity.Todo) (entity.Todo, error) {
 	repo.lastID++
 	todo.ID = repo.lastID
-	todo.CreatedAt = time.Now().Format(time.RFC3339)
-	todo.UpdatedAt = todo.CreatedAt
-	todo.DeletedAt = nil
-	stmt, err1 := repo.Db.Prepare("INSERT INTO todos (title, activity_group_id, is_active, priority) VALUES (?,?,?,?)")
-	if err1 != nil {
-		log.Println(err1)
-	}
-	_, err := stmt.Exec(todo.Title, todo.ActivityGroupId, todo.IsActive, todo.Priority)
-	if err != nil {
-		log.Println(err)
-	}
-	repo.todoCache = append(repo.todoCache, todo)
+	//todo.CreatedAt = time.Now().Format(time.RFC3339)
+	//todo.UpdatedAt = todo.CreatedAt
+	go func() {
+		todo.DeletedAt = nil
+		stmt, err1 := repo.Db.Prepare("INSERT INTO todos (title, activity_group_id, is_active, priority) VALUES (?,?,?,?)")
+		if err1 != nil {
+			log.Println(err1)
+		}
+		_, err := stmt.Exec(todo.Title, todo.ActivityGroupId, todo.IsActive, todo.Priority)
+		if err != nil {
+			log.Println(err)
+		}
+		repo.todoAllCache = append(repo.todoAllCache, todo)
+	}()
 	return todo, nil
 
 }
@@ -67,7 +80,7 @@ func (repo *TodoRepository) Add(todo entity.Todo) (entity.Todo, error) {
 func (repo *TodoRepository) GetAll() ([]entity.Todo, error) {
 
 	if len(repo.todoAllCache) > 0 {
-
+		//log.Println("Usiing Cache")
 		return repo.todoAllCache, nil
 	} else {
 		stmt, err := repo.Db.Prepare("SELECT * FROM todos")
@@ -122,11 +135,15 @@ func (repo *TodoRepository) UpdateById(id int, title string, isActive string) (e
 	var err error
 	// get updated data
 	activity, err := repo.GetById(id)
+
 	if title != "" {
 		activity.Title = title
-		stmt, _ := repo.Db.Prepare("UPDATE todos SET title = ? WHERE id = ?")
+		go func() {
 
-		stmt.Exec(title, id)
+			stmt, _ := repo.Db.Prepare("UPDATE todos SET title = ? WHERE id = ?")
+
+			stmt.Exec(title, id)
+		}()
 	}
 	if isActive != "" {
 		isTodoActive := 0
@@ -135,10 +152,12 @@ func (repo *TodoRepository) UpdateById(id int, title string, isActive string) (e
 			activity.IsActive = false
 			isTodoActive = 1
 		}
+		go func() {
 
-		stmt, _ := repo.Db.Prepare("UPDATE todos SET is_active = ? WHERE id = ?")
+			stmt, _ := repo.Db.Prepare("UPDATE todos SET is_active = ? WHERE id = ?")
 
-		stmt.Exec(isTodoActive, id)
+			stmt.Exec(isTodoActive, id)
+		}()
 	}
 
 	return activity, err

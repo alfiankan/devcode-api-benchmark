@@ -175,7 +175,7 @@ func (ctrl *TodoController) GetAll(ctx *fiber.Ctx) error {
 	return ctx.Status(200).JSON(&entity.BaseApiResponse{
 		Status:  "Success",
 		Message: "Success",
-		Data:    result,
+		Data:    nil,
 	})
 }
 

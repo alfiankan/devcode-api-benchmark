@@ -79,16 +79,7 @@ func (ctrl *ActivityController) Plain(ctx *fiber.Ctx) error {
 }
 func (ctrl *ActivityController) Add(ctx *fiber.Ctx) error {
 	var requestData entity.ActivityCreateRequest
-	errParseBody := ctx.BodyParser(&requestData)
-
-	if errParseBody != nil {
-		return ctx.Status(400).JSON(&entity.BaseApiResponse{
-			Status:  "Bad Request",
-			Message: "Bad Request",
-			Data:    entity.EmptyObject{},
-		})
-	}
-
+	ctx.BodyParser(&requestData)
 	if requestData.Title == "" {
 		return ctx.Status(400).JSON(&entity.BaseApiResponse{
 			Status:  "Bad Request",
@@ -167,6 +158,8 @@ func (ctrl *ActivityController) UpdateById(ctx *fiber.Ctx) error {
 	})
 
 }
+
+
 
 func NewActivityController(service *service.ActivityServiceInterface) *ActivityController {
 	return &ActivityController{

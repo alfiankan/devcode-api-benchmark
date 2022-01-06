@@ -40,7 +40,8 @@ func TestActivityRepository_AddSingle(t *testing.T) {
 		Email: "em@email.com",
 	})
 	log.Println(err, res)
-	log.Println(time.Since(start))
+	log.Println("INSERT TIME ELAPSED",time.Since(start))
+	time.Sleep(time.Second * 5)
 
 }
 

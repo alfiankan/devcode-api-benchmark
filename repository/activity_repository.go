@@ -3,7 +3,6 @@ package repository
 import (
 	"database/sql"
 	"devcode/entity"
-	"time"
 )
 
 type ActivityRepository struct {
@@ -21,9 +20,12 @@ type ActivityRepositoryInterface interface {
 }
 
 func (repo *ActivityRepository) UpdateById(id int, title string) (entity.ActivityWNull, error) {
-	stmt, _ := repo.Db.Prepare("UPDATE activities SET title = ? WHERE id = ?")
+	go func() {
 
-	stmt.Exec(title, id)
+		stmt, _ := repo.Db.Prepare("UPDATE activities SET title = ? WHERE id = ?")
+
+		stmt.Exec(title, id)
+	}()
 	// get updated data
 	activity, err := repo.GetById(id)
 	activity.Title = title
@@ -45,13 +47,14 @@ func (repo *ActivityRepository) DeleteById(id int) error {
 func (repo *ActivityRepository) Add(activity entity.Activity) (entity.Activity, error) {
 	repo.lastID++
 	activity.ID = repo.lastID
-	activity.CreatedAt = time.Now().Format(time.RFC3339)
-	activity.UpdatedAt = activity.CreatedAt
+	// activity.CreatedAt = time.Now().Format(time.RFC3339)
+	// activity.UpdatedAt = activity.CreatedAt
 	activity.DeletedAt = nil
-	stmt, _ := repo.Db.Prepare("INSERT INTO activities (title, email) VALUES (?,?)")
-
-	stmt.Exec(activity.Title, activity.Email)
-	repo.activityCache = append(repo.activityCache, activity)
+	go func() {
+		stmt, _ := repo.Db.Prepare("INSERT INTO activities (title, email) VALUES (?,?)")
+		stmt.Exec(activity.Title, activity.Email)
+	}()
+	//repo.activityCache = append(repo.activityCache, activity)
 
 	return activity, nil
 }
